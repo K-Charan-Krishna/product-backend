@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 
 const productSchema = new mongoose.Schema({
   id: {
-    type: Number,
+    type: String,
     required: true,
     unique: true
   },
@@ -30,11 +30,11 @@ const productSchema = new mongoose.Schema({
   rating: {
     rate: {
       type: Number,
-      required: true
+      required: false
     },
     count: {
       type: Number,
-      required: true
+      required: false
     }
   }
 }, {

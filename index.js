@@ -159,19 +159,31 @@ const storage = multer.diskStorage({
   },
   filename: function (req, file, cb) {
     const timestamp = Date.now();
-    const ext = path.extname(file.originalname);
-    // const ext = path.basename(file.originalname);
+    // const ext = path.extname(file.originalname);
+    const ext = path.basename(file.originalname);
     cb(null, `image_${timestamp}${ext}`);
   }
 });
 
 const upload = multer({ storage });
 
-app.post('/upload', upload.single('tiger'), (req, res) => {
-  res.send({
+app.post('/uploads/products', upload.single('image'), async(req, res) => {
+  console.log('API hit on upload Products')
+  try{
+    const { productId ,title,price,description,category} = req.body;
+    let path=`/uploads/products/${req.file.filename}`
+    const newProduct = new Product({ id:productId,title,price,description,category,image:path});
+    // let data=await Product.create({ id:productId,title,price,description,category,image:path})
+    await newProduct.save()
+    console.log(data,'from')
+    res.send({
     message: 'File uploaded successfully',
     path: `/uploads/products/${req.file.filename}`
   });
+  }
+  catch(e){
+    res.send({message:e.message})
+  }
 });
 
 
