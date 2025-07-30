@@ -175,7 +175,6 @@ app.post('/uploads/products', upload.single('image'), async(req, res) => {
     const newProduct = new Product({ id:productId,title,price,description,category,image:path});
     // let data=await Product.create({ id:productId,title,price,description,category,image:path})
     await newProduct.save()
-    console.log(data,'from')
     res.send({
     message: 'File uploaded successfully',
     path: `/uploads/products/${req.file.filename}`
@@ -183,6 +182,29 @@ app.post('/uploads/products', upload.single('image'), async(req, res) => {
   }
   catch(e){
     res.send({message:e.message})
+  }
+});
+
+//get single Product 
+
+app.get('/product/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const product = await Product.findOne({id});
+
+    if (!product) {
+      return res.status(404).json({ message: 'Product not found' });
+    }
+    const category = product.category;
+    const related_products = await Product.find({category});
+    res.status(200).json({
+      product,
+      related_products,
+    });
+
+  } catch (error) {
+    console.error('Error fetching product:', error);
+    res.status(500).json({ message: 'Internal Server Error' });
   }
 });
 
