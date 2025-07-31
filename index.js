@@ -175,7 +175,6 @@ app.post('/uploads/products', upload.single('image'), async(req, res) => {
     const newProduct = new Product({ id:productId,title,price,description,category,image:path});
     // let data=await Product.create({ id:productId,title,price,description,category,image:path})
     await newProduct.save()
-    console.log(data,'from')
     res.send({
     message: 'File uploaded successfully',
     path: `/uploads/products/${req.file.filename}`
@@ -185,6 +184,16 @@ app.post('/uploads/products', upload.single('image'), async(req, res) => {
     res.send({message:e.message})
   }
 });
+
+app.post('/adminaccess',async(req,res)=>{
+  const {email}=req.body
+  const user= await User.findOne({email})
+  if (!user){
+    res.send({message:"User Does't Exisist"})
+  }
+  await User.updateOne({email},{$set:{admin:true}})
+  res.status(200).send({message:'Changes Made!'})
+})
 
 
 // Start server
