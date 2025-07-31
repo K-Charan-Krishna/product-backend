@@ -185,15 +185,28 @@ app.post('/uploads/products', upload.single('image'), async(req, res) => {
   }
 });
 
-app.post('/adminaccess',async(req,res)=>{
-  const {email}=req.body
-  const user= await User.findOne({email})
-  if (!user){
-    res.send({message:"User Does't Exisist"})
+//get single Product 
+
+app.get('/product/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const product = await Product.findOne({id});
+
+    if (!product) {
+      return res.status(404).json({ message: 'Product not found' });
+    }
+    const category = product.category;
+    const related_products = await Product.find({category});
+    res.status(200).json({
+      product,
+      related_products,
+    });
+
+  } catch (error) {
+    console.error('Error fetching product:', error);
+    res.status(500).json({ message: 'Internal Server Error' });
   }
-  await User.updateOne({email},{$set:{admin:true}})
-  res.status(200).send({message:'Changes Made!'})
-})
+});
 
 
 // Start server
