@@ -6,12 +6,16 @@ const bcrypt= require('bcrypt')
 const fs = require('fs');
 const path = require('path');
 const multer = require('multer');
+require('dotenv').config();
+const nodemailer = require('nodemailer');
 
 const app = express();
 // const router = express.Router();
 
 const User=require('./models/User')
-const Product=require('./models/Products')
+const Product=require('./models/Products');
+const { uploads3 } = require('./utilits/multers3');
+const { uploadFile, deleteFile } = require('./utilits/s3uploads');
 
 //word
 const word='charan'
@@ -21,7 +25,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 
 // Middleware to parse JSON
-app.use(cors());
+app.use(cors({origin:"http://localhost:64242/"}));
 app.use(express.json());
 
 // MongoDB connection
@@ -165,6 +169,12 @@ const storage = multer.diskStorage({
   }
 });
 
+// const storage=multer.memoryStorage({
+//   filename:function(req,file,cb){
+//     console.log(req.file)
+//   }
+// })
+
 const upload = multer({ storage });
 
 app.post('/uploads/products', upload.single('image'), async(req, res) => {
@@ -207,6 +217,93 @@ app.get('/product/:id', async (req, res) => {
     res.status(500).json({ message: 'Internal Server Error' });
   }
 });
+
+app.post('/uplodetos3',uploads3.single('image'),async(req,res)=>{
+    try {
+      const {productId,title,price,description,category}=req.body
+      const bucketName=process.env.AWS_BUCKET_NAME
+      const key=Date.now()+req.file.originalname;
+      const fileBuffer=req.file.buffer.data;
+      const mimetype=req.file.mimetype;
+      const fileuploade=await uploadFile(bucketName, key, fileBuffer, mimetype)
+      const newProduct = new Product({ id:productId,title,price,description,category,image:fileuploade,key:key});
+      await newProduct.save()
+      return res.status(201).send({
+              success:true,
+              statuscode:201,
+              message: 'File uploaded successfully',
+              data: fileuploade,
+            });
+    } catch (error) {
+    return res.status(500).json({
+        success:false,
+        statuscode:500,
+        message:'Unable to Create!',
+        data:[]
+    })
+    }
+})
+
+app.post('/deletefroms3',uploads3.single('image'),async(req,res)=>{
+  try {
+    const bucketName=process.env.AWS_BUCKET_NAME
+    const {productId}=req.query
+    console.log(productId)
+    const products=await Product.findOne({id:productId})
+    if (!products){
+      return res.status(400).json({
+        success:false,
+        statuscode:400,
+        message:'Product Not Found!',
+        data:[]
+      })
+    }
+    console.log(products)
+    const key =products.key
+    const deleteFileres=await deleteFile(bucketName,key)
+    await Product.deleteOne({id:productId})
+    return res.status(200).json({
+        success:deleteFileres,
+        statuscode:200,
+        message:'Deleted Successfully!',
+        data:[]
+    })
+  } catch (error) {
+    return res.status(500).json({
+        success:false,
+        statuscode:500,
+        message:'Unable to Delete!',
+        data:[]
+    })
+  }
+})
+
+app.post('/sendmail',async(req,res)=>{
+  // Create transporter
+  const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      user: 'your-email@gmail.com',
+      pass: 'your-app-password', // or real password (not recommended)
+    },
+  });
+  const mailOptions = {
+  from: 'your-email@gmail.com',
+  to: 'recipient@example.com',
+  subject: 'Test Email from Node.js',
+  text: 'Hello! This is a plain text email.',
+  // or use HTML
+  // html: '<h1>Hello</h1><p>This is an HTML email.</p>',
+};
+transporter.sendMail(mailOptions, (error, info) => {
+  if (error) {
+    console.error('Error sending email:', error);
+  } else {
+    console.log('Email sent:', info.response);
+  }
+})
+
+})
 
 
 // Start server
